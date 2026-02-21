@@ -19,13 +19,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+
+const SAMPLE_DATA = [
+  {
+    make: 'Toyota',
+    model: 'Camry',
+    year: 2022,
+    license_plate: 'DL-01-AB-1234',
+    vin: '1HGBH41JXMN109186',
+    current_odometer: 15000,
+    fuel_capacity: 50,
+  },
+  {
+    make: 'Maruti',
+    model: 'Swift',
+    year: 2023,
+    license_plate: 'MH-02-CD-5678',
+    vin: 'MA3ERLF7S00123456',
+    current_odometer: 8000,
+    fuel_capacity: 35,
+  },
+  {
+    make: 'Mahindra',
+    model: 'Scorpio',
+    year: 2022,
+    license_plate: 'KA-03-EF-9012',
+    vin: 'MBLHA26S9JT012345',
+    current_odometer: 22000,
+    fuel_capacity: 60,
+  },
+]
 
 export function AddVehicleButton() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     vin: '',
     make: '',
@@ -40,19 +71,44 @@ export function AddVehicleButton() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
+      // Ensure numeric fields are numbers, not strings
+      const payload = {
+        ...formData,
+        year: Number(formData.year),
+        current_odometer: Number(formData.current_odometer) || 0,
+        fuel_capacity: Number(formData.fuel_capacity) || 0,
+      }
+
       const response = await fetch('/api/vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
+
+      const data = await response.json()
 
       if (response.ok) {
         setOpen(false)
+        setFormData({
+          vin: '',
+          make: '',
+          model: '',
+          year: new Date().getFullYear(),
+          license_plate: '',
+          status: 'available',
+          current_odometer: 0,
+          fuel_capacity: 50,
+        })
         router.refresh()
+      } else {
+        setError(data.error || 'Failed to add vehicle')
+        console.error('API Error:', data)
       }
     } catch (error) {
+      setError('Network error. Please try again.')
       console.error('Failed to add vehicle:', error)
     } finally {
       setLoading(false)
@@ -74,6 +130,35 @@ export function AddVehicleButton() {
             Enter vehicle details to add to your fleet.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Sample Data Cards */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkles className="w-4 h-4" />
+            <span>Quick Fill - Click to use sample data:</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {SAMPLE_DATA.map((sample, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setFormData({ ...formData, ...sample, status: 'available' })}
+                className="p-2 text-xs border rounded hover:bg-accent hover:border-primary transition-colors text-left"
+              >
+                <div className="font-semibold">{sample.make} {sample.model}</div>
+                <div className="text-muted-foreground">{sample.license_plate}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-lg">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">

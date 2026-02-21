@@ -9,8 +9,21 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Edit, Trash2 } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface Assignment {
   id: string
@@ -19,12 +32,12 @@ interface Assignment {
   is_active: boolean
   assigned_date: string
   unassigned_date: string | null
-  vehicles: {
+  vehicles?: {
     make: string
     model: string
     license_plate: string
   }
-  profiles: {
+  profiles?: {
     first_name: string
     last_name: string
     email: string
@@ -38,6 +51,23 @@ export function AssignmentsTable({
   assignments: Assignment[]
   canEdit: boolean
 }) {
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const completeAssignment = async (id: string) => {
+    try {
+      const res = await fetch(`/api/assignments/${id}`, { method: 'PATCH' })
+      if (res.ok) {
+        toast({ title: '✅ Assignment completed', description: 'Vehicle is now offline.' })
+        router.refresh()
+      } else {
+        const err = await res.json()
+        toast({ title: 'Error', description: err.error || 'Failed to complete', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error', variant: 'destructive' })
+    }
+  }
   if (!assignments || assignments.length === 0) {
     return (
       <div className="text-center py-8">
@@ -62,29 +92,57 @@ export function AssignmentsTable({
         {assignments.map((assignment) => (
           <TableRow key={assignment.id}>
             <TableCell className="font-medium">
-              {assignment.profiles?.first_name} {assignment.profiles?.last_name}
+              {assignment.profiles
+                ? `${assignment.profiles.first_name} ${assignment.profiles.last_name}`
+                : `Driver ID: ${assignment.driver_id.substring(0, 8)}...`}
             </TableCell>
             <TableCell>
-              {assignment.vehicles?.make} {assignment.vehicles?.model}
+              {assignment.vehicles
+                ? `${assignment.vehicles.make} ${assignment.vehicles.model}`
+                : `Vehicle ID: ${assignment.vehicle_id.substring(0, 8)}...`}
             </TableCell>
-            <TableCell>{assignment.vehicles?.license_plate}</TableCell>
+            <TableCell>
+              {assignment.vehicles?.license_plate || 'N/A'}
+            </TableCell>
             <TableCell>
               {new Date(assignment.assigned_date).toLocaleDateString()}
             </TableCell>
             <TableCell>
-              <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                {assignment.is_active ? 'Active' : 'Inactive'}
-              </Badge>
+              <div className="space-y-1">
+                <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                  {assignment.is_active ? 'Active' : 'Completed'}
+                </Badge>
+                {!assignment.is_active && assignment.unassigned_date && (
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(assignment.unassigned_date).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
             </TableCell>
             {canEdit && (
               <TableCell>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-red-600">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {assignment.is_active && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Complete this assignment?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will mark the assignment as completed and set the driver offline.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => completeAssignment(assignment.id)}>Complete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </TableCell>
             )}

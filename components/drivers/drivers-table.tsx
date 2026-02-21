@@ -20,7 +20,7 @@ interface Driver {
   phone: string
   status: 'active' | 'inactive' | 'on_leave'
   experience_years: number
-  profiles: {
+  profiles?: {
     first_name: string
     last_name: string
     email: string
@@ -77,9 +77,13 @@ export function DriversTable({
         {drivers.map((driver) => (
           <TableRow key={driver.id}>
             <TableCell className="font-medium">
-              {driver.profiles?.first_name} {driver.profiles?.last_name}
+              {driver.profiles 
+                ? `${driver.profiles.first_name} ${driver.profiles.last_name}`
+                : `User: ${driver.user_id.substring(0, 8)}...`}
             </TableCell>
-            <TableCell>{driver.profiles?.email}</TableCell>
+            <TableCell>
+              {driver.profiles?.email || 'N/A'}
+            </TableCell>
             <TableCell className="text-sm text-muted-foreground">
               {driver.license_number}
             </TableCell>

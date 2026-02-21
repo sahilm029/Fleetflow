@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { LogOut, Gauge, Truck, Users, Settings, Wrench, Map, Navigation, BarChart3 } from 'lucide-react'
+import { LogOut, Gauge, Truck, Users, Settings, Wrench, Map, Navigation, BarChart3, UserCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function DashboardNav() {
@@ -65,6 +65,7 @@ export function DashboardNav() {
             {(role === 'admin' || role === 'manager') && (
               <NavLink href="/dashboard/analytics" icon={BarChart3} label="Analytics" />
             )}
+            <NavLink href="/dashboard/profile" icon={UserCircle} label="Profile" />
             {role === 'admin' && (
               <NavLink href="/dashboard/settings" icon={Settings} label="Settings" />
             )}

@@ -1,38 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/dashboard/stat-card'
-import { FleetUtilizationChart } from '@/components/analytics/fleet-utilization'
-import { FuelConsumptionChart } from '@/components/analytics/fuel-consumption'
-import { MaintenanceCostChart } from '@/components/analytics/maintenance-cost'
-import { DriverPerformanceChart } from '@/components/analytics/driver-performance'
+import { AnalyticsCharts } from '@/components/analytics/analytics-charts'
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Fetch user role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single()
-
   // Fetch analytics data
-  const { data: vehicles } = await supabase.from('vehicles').select('id')
-  const { data: trips } = await supabase
-    .from('trip_history')
-    .select('distance_km, fuel_used, duration_hours')
-  const { data: maintenance } = await supabase
-    .from('maintenance_logs')
-    .select('cost')
-  const { data: fuelLogs } = await supabase.from('fuel_logs').select('fuel_amount')
+  const [
+    { data: vehicles },
+    { data: trips },
+    { data: maintenance },
+    { data: fuelLogs },
+  ] = await Promise.all([
+    supabase.from('vehicles').select('id'),
+    supabase.from('trip_history').select('distance_km, fuel_used, duration_hours'),
+    supabase.from('maintenance_logs').select('cost'),
+    supabase.from('fuel_logs').select('fuel_amount'),
+  ])
 
-  // Calculate KPIs
+  // KPIs
   const totalTrips = trips?.length || 0
   const totalDistance = trips?.reduce((sum, t) => sum + (t.distance_km || 0), 0) || 0
   const totalFuelUsed = fuelLogs?.reduce((sum, f) => sum + (f.fuel_amount || 0), 0) || 0
@@ -75,48 +64,14 @@ export default async function AnalyticsPage() {
         />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Fleet Utilization</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FleetUtilizationChart vehicles={vehicles?.length || 0} trips={totalTrips} />
-          </CardContent>
-        </Card>
+      {/* Charts */}
+      <AnalyticsCharts
+        vehicles={vehicles?.length || 0}
+        trips={trips || []}
+        maintenance={maintenance || []}
+      />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Fuel Consumption Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FuelConsumptionChart trips={trips || []} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Maintenance Costs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MaintenanceCostChart maintenance={maintenance || []} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Driver Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DriverPerformanceChart trips={trips || []} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Summary Section */}
+      {/* Summary */}
       <Card>
         <CardHeader>
           <CardTitle>Fleet Summary</CardTitle>

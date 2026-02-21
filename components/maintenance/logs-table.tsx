@@ -18,7 +18,7 @@ interface MaintenanceLog {
   cost: number
   odometer_reading: number
   notes: string
-  vehicles: {
+  vehicles?: {
     make: string
     model: string
     license_plate: string
@@ -54,7 +54,9 @@ export function MaintenanceLogsTable({
         {logs.map((log) => (
           <TableRow key={log.id}>
             <TableCell className="font-medium">
-              {log.vehicles?.make} {log.vehicles?.model}
+              {log.vehicles
+                ? `${log.vehicles.make} ${log.vehicles.model}`
+                : `Vehicle ID: ${log.vehicle_id.substring(0, 8)}...`}
             </TableCell>
             <TableCell>{log.service_type}</TableCell>
             <TableCell>

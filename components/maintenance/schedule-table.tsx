@@ -20,7 +20,7 @@ interface MaintenanceSchedule {
   priority: 'low' | 'normal' | 'high' | 'critical'
   estimated_cost: number
   notes: string
-  vehicles: {
+  vehicles?: {
     make: string
     model: string
     license_plate: string
@@ -77,7 +77,9 @@ export function MaintenanceScheduleTable({
           return (
             <TableRow key={schedule.id} className={overdue ? 'bg-red-50' : ''}>
               <TableCell className="font-medium">
-                {schedule.vehicles?.make} {schedule.vehicles?.model}
+                {schedule.vehicles
+                  ? `${schedule.vehicles.make} ${schedule.vehicles.model}`
+                  : `Vehicle ID: ${schedule.vehicle_id.substring(0, 8)}...`}
               </TableCell>
               <TableCell>{schedule.service_type}</TableCell>
               <TableCell>

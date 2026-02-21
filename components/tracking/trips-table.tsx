@@ -22,16 +22,16 @@ interface Trip {
   duration_hours: number
   fuel_used: number
   status: 'in_progress' | 'completed' | 'cancelled'
-  vehicles: {
+  vehicles?: {
     make: string
     model: string
     license_plate: string
   }
-  profiles: {
+  profiles?: {
     first_name: string
     last_name: string
   }
-  routes: {
+  routes?: {
     name: string
     distance_km: number
   } | null
@@ -95,10 +95,14 @@ export function TripsTable({ trips }: { trips: Trip[] }) {
         {trips.map((trip) => (
           <TableRow key={trip.id}>
             <TableCell className="font-medium">
-              {trip.vehicles?.make} {trip.vehicles?.model}
+              {trip.vehicles
+                ? `${trip.vehicles.make} ${trip.vehicles.model}`
+                : `Vehicle ID: ${trip.vehicle_id.substring(0, 8)}...`}
             </TableCell>
             <TableCell>
-              {trip.profiles?.first_name} {trip.profiles?.last_name}
+              {trip.profiles
+                ? `${trip.profiles.first_name} ${trip.profiles.last_name}`
+                : `Driver ID: ${trip.driver_id.substring(0, 8)}...`}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
               {trip.routes?.name || 'Custom Route'}

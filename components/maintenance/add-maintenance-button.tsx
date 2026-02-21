@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Tabs, TabsContent, TabsList, TabsTrigger } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface Vehicle {
@@ -28,6 +28,57 @@ interface Vehicle {
   model: string
   license_plate: string
 }
+
+const SAMPLE_SCHEDULE_DATA = [
+  {
+    service_type: 'Oil Change',
+    scheduled_date: '2026-03-15',
+    priority: 'normal',
+    estimated_cost: 3500,
+    interval_months: 3,
+    notes: 'Regular oil change due',
+  },
+  {
+    service_type: 'Brake Inspection',
+    scheduled_date: '2026-03-20',
+    priority: 'high',
+    estimated_cost: 5000,
+    interval_months: 6,
+    notes: 'Check brake pads and discs',
+  },
+  {
+    service_type: 'AC Service',
+    scheduled_date: '2026-04-05',
+    priority: 'normal',
+    estimated_cost: 8000,
+    interval_months: 12,
+    notes: 'AC gas refill and filter change',
+  },
+]
+
+const SAMPLE_LOG_DATA = [
+  {
+    service_type: 'Oil Change',
+    service_provider: 'AutoCare Service Center',
+    cost: 3200,
+    odometer_reading: 14500,
+    notes: 'Oil and filter changed',
+  },
+  {
+    service_type: 'Brake Pad Replacement',
+    service_provider: 'Speed Auto Garage',
+    cost: 8500,
+    odometer_reading: 31200,
+    notes: 'Front brake pads replaced',
+  },
+  {
+    service_type: 'Battery Replacement',
+    service_provider: 'Exide Battery Center',
+    cost: 11500,
+    odometer_reading: 4800,
+    notes: 'New battery installed',
+  },
+]
 
 export function AddMaintenanceButton() {
   const router = useRouter()
@@ -42,6 +93,7 @@ export function AddMaintenanceButton() {
     interval_months: 0,
     priority: 'normal',
     estimated_cost: 0,
+    notes: '',
   })
   const [logData, setLogData] = useState({
     vehicle_id: '',
@@ -50,6 +102,7 @@ export function AddMaintenanceButton() {
     service_provider: '',
     cost: 0,
     odometer_reading: 0,
+    notes: '',
   })
 
   useEffect(() => {
@@ -154,7 +207,29 @@ export function AddMaintenanceButton() {
         </div>
 
         {tab === 'schedule' && (
-          <form onSubmit={handleScheduleSubmit} className="space-y-4">
+          <>
+            {/* Sample Data Cards */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="w-4 h-4" />
+                <span>Quick Fill:</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {SAMPLE_SCHEDULE_DATA.map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setScheduleData({ ...scheduleData, ...sample })}
+                    className="p-2 text-xs border rounded hover:bg-accent hover:border-primary transition-colors text-left"
+                  >
+                    <div className="font-semibold">{sample.service_type}</div>
+                    <div className="text-muted-foreground">₹{sample.estimated_cost}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="vehicle">Vehicle</Label>
               <Select
@@ -228,6 +303,21 @@ export function AddMaintenanceButton() {
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="interval">Interval (months)</Label>
+              <Input
+                id="interval"
+                type="number"
+                value={scheduleData.interval_months}
+                onChange={(e) =>
+                  setScheduleData({
+                    ...scheduleData,
+                    interval_months: parseInt(e.target.value),
+                  })
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="cost">Estimated Cost</Label>
               <Input
                 id="cost"
@@ -242,14 +332,49 @@ export function AddMaintenanceButton() {
               />
             </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                value={scheduleData.notes}
+                onChange={(e) =>
+                  setScheduleData({ ...scheduleData, notes: e.target.value })
+                }
+                placeholder="Optional notes"
+              />
+            </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Adding...' : 'Add Schedule'}
             </Button>
           </form>
+          </>
         )}
 
         {tab === 'log' && (
-          <form onSubmit={handleLogSubmit} className="space-y-4">
+          <>
+            {/* Sample Data Cards */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="w-4 h-4" />
+                <span>Quick Fill:</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {SAMPLE_LOG_DATA.map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setLogData({ ...logData, ...sample, completion_date: new Date().toISOString().split('T')[0] })}
+                    className="p-2 text-xs border rounded hover:bg-accent hover:border-primary transition-colors text-left"
+                  >
+                    <div className="font-semibold">{sample.service_type}</div>
+                    <div className="text-muted-foreground">₹{sample.cost}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleLogSubmit} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="log-vehicle">Vehicle</Label>
               <Select
@@ -295,6 +420,21 @@ export function AddMaintenanceButton() {
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="log-odometer">Odometer Reading (km)</Label>
+              <Input
+                id="log-odometer"
+                type="number"
+                value={logData.odometer_reading}
+                onChange={(e) =>
+                  setLogData({
+                    ...logData,
+                    odometer_reading: parseFloat(e.target.value),
+                  })
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="log-cost">Cost</Label>
               <Input
                 id="log-cost"
@@ -306,10 +446,23 @@ export function AddMaintenanceButton() {
               />
             </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="log-notes">Notes</Label>
+              <Input
+                id="log-notes"
+                value={logData.notes}
+                onChange={(e) =>
+                  setLogData({ ...logData, notes: e.target.value })
+                }
+                placeholder="Optional notes"
+              />
+            </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Adding...' : 'Add Log Entry'}
             </Button>
           </form>
+          </>
         )}
       </DialogContent>
     </Dialog>

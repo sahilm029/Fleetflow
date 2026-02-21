@@ -17,7 +17,7 @@ interface Vehicle {
   current_longitude: number | null
   is_online: boolean
   last_update: string
-  vehicles: {
+  vehicles?: {
     make: string
     model: string
     license_plate: string
@@ -62,10 +62,12 @@ export function VehicleStatusTable({ vehicles }: { vehicles: Vehicle[] }) {
         {vehicles.map((vehicle) => (
           <TableRow key={vehicle.vehicle_id}>
             <TableCell className="font-medium">
-              {vehicle.vehicles?.make} {vehicle.vehicles?.model}
+              {vehicle.vehicles
+                ? `${vehicle.vehicles.make} ${vehicle.vehicles.model}`
+                : `Vehicle ID: ${vehicle.vehicle_id.substring(0, 8)}...`}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {vehicle.vehicles?.license_plate}
+              {vehicle.vehicles?.license_plate || 'N/A'}
             </TableCell>
             <TableCell>
               <Badge

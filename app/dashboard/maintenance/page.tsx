@@ -1,35 +1,63 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MaintenanceScheduleTable } from '@/components/maintenance/schedule-table'
 import { MaintenanceLogsTable } from '@/components/maintenance/logs-table'
 import { AddMaintenanceButton } from '@/components/maintenance/add-maintenance-button'
 
-export default async function MaintenancePage() {
-  const supabase = await createClient()
+export default function MaintenancePage() {
+  const [schedules, setSchedules] = useState<any[]>([])
+  const [logs, setLogs] = useState<any[]>([])
+  const [userRole, setUserRole] = useState<string>('driver')
+  const [loading, setLoading] = useState(true)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      
+      // Get user and role from metadata
+      const { data: { user } } = await supabase.auth.getUser()
+      const role = user?.user_metadata?.role || 'driver'
+      setUserRole(role)
 
-  // Fetch user role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single()
+      // Fetch maintenance data from API endpoints
+      try {
+        const [schedulesRes, logsRes] = await Promise.all([
+          fetch('/api/maintenance/schedules'),
+          fetch('/api/maintenance/logs'),
+        ])
 
-  // Fetch maintenance schedules
-  const { data: schedules } = await supabase
-    .from('maintenance_schedules')
-    .select('*, vehicles(make, model, license_plate)')
-    .order('scheduled_date', { ascending: true })
+        if (schedulesRes.ok) {
+          const schedulesData = await schedulesRes.json()
+          setSchedules(schedulesData || [])
+        } else {
+          console.error('Failed to fetch schedules:', schedulesRes.status)
+          setSchedules([])
+        }
 
-  // Fetch maintenance logs
-  const { data: logs } = await supabase
-    .from('maintenance_logs')
-    .select('*, vehicles(make, model, license_plate)')
-    .order('completion_date', { ascending: false })
+        if (logsRes.ok) {
+          const logsData = await logsRes.json()
+          setLogs(logsData || [])
+        } else {
+          console.error('Failed to fetch logs:', logsRes.status)
+          setLogs([])
+        }
+      } catch (error) {
+        console.error('Error fetching maintenance data:', error)
+        setSchedules([])
+        setLogs([])
+      }
+      
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [])
+
+  const canEdit = ['admin', 'manager'].includes(userRole)
 
   return (
     <div className="space-y-8 p-8">
@@ -38,9 +66,7 @@ export default async function MaintenancePage() {
           <h1 className="text-3xl font-bold tracking-tight">Maintenance Management</h1>
           <p className="text-muted-foreground">Track vehicle maintenance schedules and history</p>
         </div>
-        {['admin', 'manager'].includes(profile?.role) && (
-          <AddMaintenanceButton />
-        )}
+        {canEdit && <AddMaintenanceButton />}
       </div>
 
       <Tabs defaultValue="schedules" className="w-full">
@@ -55,7 +81,11 @@ export default async function MaintenancePage() {
               <CardTitle>Maintenance Schedules</CardTitle>
             </CardHeader>
             <CardContent>
-              <MaintenanceScheduleTable schedules={schedules || []} canEdit={['admin', 'manager'].includes(profile?.role)} />
+              {loading ? (
+                <p className="text-center py-8 text-muted-foreground">Loading schedules...</p>
+              ) : (
+                <MaintenanceScheduleTable schedules={schedules} canEdit={canEdit} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -66,7 +96,11 @@ export default async function MaintenancePage() {
               <CardTitle>Maintenance History</CardTitle>
             </CardHeader>
             <CardContent>
-              <MaintenanceLogsTable logs={logs || []} />
+              {loading ? (
+                <p className="text-center py-8 text-muted-foreground">Loading logs...</p>
+              ) : (
+                <MaintenanceLogsTable logs={logs} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

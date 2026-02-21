@@ -1,27 +1,47 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DriversTable } from '@/components/drivers/drivers-table'
 import { AddDriverButton } from '@/components/drivers/add-driver-button'
 
-export default async function DriversPage() {
-  const supabase = await createClient()
+export default function DriversPage() {
+  const [drivers, setDrivers] = useState<any[]>([])
+  const [userRole, setUserRole] = useState<string>('driver')
+  const [loading, setLoading] = useState(true)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      
+      // Get user and role from metadata
+      const { data: { user } } = await supabase.auth.getUser()
+      const role = user?.user_metadata?.role || 'driver'
+      setUserRole(role)
 
-  // Fetch user role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single()
+      // Fetch drivers from API endpoint (handles RLS issues server-side)
+      try {
+        const response = await fetch('/api/drivers')
+        if (response.ok) {
+          const data = await response.json()
+          setDrivers(data || [])
+        } else {
+          console.error('Failed to fetch drivers:', response.status)
+          setDrivers([])
+        }
+      } catch (error) {
+        console.error('Error fetching drivers:', error)
+        setDrivers([])
+      }
+      
+      setLoading(false)
+    }
 
-  // Fetch drivers with profile info
-  const { data: drivers } = await supabase
-    .from('drivers')
-    .select('*, profiles(first_name, last_name, email, phone)')
-    .order('created_at', { ascending: false })
+    fetchData()
+  }, [])
+
+  const canEdit = ['admin', 'manager'].includes(userRole)
 
   return (
     <div className="space-y-8 p-8">
@@ -30,9 +50,7 @@ export default async function DriversPage() {
           <h1 className="text-3xl font-bold tracking-tight">Driver Management</h1>
           <p className="text-muted-foreground">Manage your drivers and their information</p>
         </div>
-        {['admin', 'manager'].includes(profile?.role) && (
-          <AddDriverButton />
-        )}
+        {canEdit && <AddDriverButton />}
       </div>
 
       <Card>
@@ -40,7 +58,11 @@ export default async function DriversPage() {
           <CardTitle>Drivers</CardTitle>
         </CardHeader>
         <CardContent>
-          <DriversTable drivers={drivers || []} canEdit={['admin', 'manager'].includes(profile?.role)} />
+          {loading ? (
+            <p className="text-center py-8 text-muted-foreground">Loading drivers...</p>
+          ) : (
+            <DriversTable drivers={drivers} canEdit={canEdit} />
+          )}
         </CardContent>
       </Card>
     </div>

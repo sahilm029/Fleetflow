@@ -1,27 +1,47 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { VehiclesTable } from '@/components/fleet/vehicles-table'
 import { AddVehicleButton } from '@/components/fleet/add-vehicle-button'
 
-export default async function FleetPage() {
-  const supabase = await createClient()
+export default function FleetPage() {
+  const [vehicles, setVehicles] = useState<any[]>([])
+  const [userRole, setUserRole] = useState<string>('driver')
+  const [loading, setLoading] = useState(true)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      
+      // Get user and role from metadata
+      const { data: { user } } = await supabase.auth.getUser()
+      const role = user?.user_metadata?.role || 'driver'
+      setUserRole(role)
 
-  // Fetch user role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single()
+      // Fetch vehicles from API endpoint
+      try {
+        const response = await fetch('/api/vehicles')
+        if (response.ok) {
+          const data = await response.json()
+          setVehicles(data || [])
+        } else {
+          console.error('Failed to fetch vehicles:', response.status)
+          setVehicles([])
+        }
+      } catch (error) {
+        console.error('Error fetching vehicles:', error)
+        setVehicles([])
+      }
+      
+      setLoading(false)
+    }
 
-  // Fetch vehicles
-  const { data: vehicles } = await supabase
-    .from('vehicles')
-    .select('*')
-    .order('created_at', { ascending: false })
+    fetchData()
+  }, [])
+
+  const canEdit = ['admin', 'manager'].includes(userRole)
 
   return (
     <div className="space-y-8 p-8">
@@ -30,9 +50,7 @@ export default async function FleetPage() {
           <h1 className="text-3xl font-bold tracking-tight">Fleet Management</h1>
           <p className="text-muted-foreground">Manage your vehicle fleet</p>
         </div>
-        {['admin', 'manager'].includes(profile?.role) && (
-          <AddVehicleButton />
-        )}
+        {canEdit && <AddVehicleButton />}
       </div>
 
       <Card>
@@ -40,7 +58,11 @@ export default async function FleetPage() {
           <CardTitle>Vehicles</CardTitle>
         </CardHeader>
         <CardContent>
-          <VehiclesTable vehicles={vehicles || []} canEdit={['admin', 'manager'].includes(profile?.role)} />
+          {loading ? (
+            <p className="text-center py-8 text-muted-foreground">Loading vehicles...</p>
+          ) : (
+            <VehiclesTable vehicles={vehicles} canEdit={canEdit} />
+          )}
         </CardContent>
       </Card>
     </div>

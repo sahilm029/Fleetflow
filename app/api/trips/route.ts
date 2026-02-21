@@ -45,9 +45,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    // Add company_id from user metadata
+    const tripData = {
+      ...body,
+      driver_id: user.id,
+      company_id: user.user_metadata?.company_id || 'FLEET-001',
+    }
+
     const { data, error } = await supabase
       .from('trip_history')
-      .insert([{ ...body, driver_id: user.id }])
+      .insert([tripData])
       .select()
 
     if (error) throw error

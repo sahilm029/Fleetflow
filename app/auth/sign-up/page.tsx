@@ -48,13 +48,10 @@ export default function Page() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/protected`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -62,8 +59,34 @@ export default function Page() {
           },
         },
       })
-      if (error) throw error
-      // MVP: No email confirmation required - redirect directly to dashboard
+
+      if (signupError) throw signupError
+
+      // Try to ensure a profiles row exists for this user. Some Supabase
+      // projects may not have the auth trigger in place, so we upsert from
+      // the client immediately after signup.
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData?.user?.id
+        if (userId) {
+          await supabase
+            .from('profiles')
+            .upsert([
+              {
+                id: userId,
+                email,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                role: role || 'driver',
+              },
+            ])
+        }
+      } catch (upsertError) {
+        // Non-fatal: if upsert fails due to RLS or other, continue to redirect
+        console.warn('profiles upsert failed', upsertError)
+      }
+
+      // Redirect the user into the app (MVP: no email confirmation required)
       router.push('/dashboard')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
