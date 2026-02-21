@@ -145,10 +145,3 @@ The application will be available at your Vercel URL.
 ## Maps
 
 Uses OpenStreetMap with Leaflet. No API keys required. Live map shows online vehicles (green markers) and offline vehicles (gray markers).
-
-## Notes
-
-- RLS (Row Level Security) is disabled in development and requires configuration for production
-- Vehicle GPS coordinates default to New Delhi (28.6139, 77.2090) on assignment creation
-- Driver geolocation is requested when going online; falls back to default if denied
-- Completed assignments are marked as inactive and vehicle is set offline automatically
